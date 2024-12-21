@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:greenie/functions.dart';
 import 'plant_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -9,33 +11,78 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // items is the list of elements that will be displayed on the page
-  // leave the first one empty, it will be replaced by the light meter
-  final List<String> items = List.generate(20, (index) => 'Item $index');
+  bool loading = true;
+  // this is the list of plants to show
+  List<Map<String, dynamic>> collection = [];
+  int lightSensorValue = -1;
+
+  void startReadingLightSensor() async {
+    Timer.periodic(Duration(seconds: 1), (Timer timer) async {
+      int value = await readLightSensor();
+      setState(() {
+        lightSensorValue = value;
+      });
+    });
+  }
+
+  void getUserData({required String userId}) async {
+    Map<String, dynamic> res = await getCollection(userId: "userId");
+    setState(() {
+      if (res["plant_collection"] != null) {
+        for (String key in res["plant_collection"].keys) {
+          collection.add(res["plant_collection"][key]);
+        }
+      }
+      loading = false;
+    });
+    return;
+  }
+
+  @override
+  void initState() {
+    getUserData(userId: "UserId");
+    startReadingLightSensor();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
+    //print(collection);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Greenie'),
+        title: const Text('Collection'),
+        actions: [
+          IconButton(
+              onPressed: () {
+                showModalBottomSheet(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return const CustomBottomSheet();
+                    });
+              },
+              icon: const Icon(Icons.add)),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.more_vert)),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, // Two items per row
-            crossAxisSpacing: 8.0, // Space between horizontal items
-            mainAxisSpacing: 8.0, // Space between vertical items
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return LightMeterCard(lightReading: 100);
-            } else {
-              return PlantCard(plantName: "$index");
-            }
-          },
-        ),
+        child: (loading)
+            ? Placeholder()
+            : GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2, // Two items per row
+                  crossAxisSpacing: 8.0, // Space between horizontal items
+                  mainAxisSpacing: 8.0, // Space between vertical items
+                ),
+                itemCount: collection.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return LightMeterCard(lightReading: lightSensorValue);
+                  } else {
+                    return PlantCard(plantData: collection[index - 1]);
+                  }
+                },
+              ),
       ),
     );
   }
@@ -44,22 +91,23 @@ class _HomePageState extends State<HomePage> {
 class PlantCard extends StatelessWidget {
   const PlantCard({
     super.key,
-    required this.plantName,
+    required this.plantData,
   });
 
-  final String plantName;
+  final Map<String, dynamic> plantData;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        print("DEBUG: PRESSED PLANT $plantName");
         Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-          return PlantPage();
+          return PlantPage(
+            plantData: plantData,
+          );
         }));
       },
       child: Card(
-        child: Text(plantName),
+        child: Text(plantData["name"]),
       ),
     );
   }
@@ -77,8 +125,61 @@ class LightMeterCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Center(
-        child: Text("$lightReading"),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("Light reading:"),
+            Text("$lightReading"),
+          ],
+        ),
       ),
     );
+  }
+}
+
+class CustomBottomSheet extends StatelessWidget {
+  const CustomBottomSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomSheet(
+        onClosing: () {},
+        showDragHandle: true,
+        builder: (BuildContext context) {
+          return SizedBox(
+            height: 240,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: ListView(children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(0, 0, 0, 16),
+                  child: Text(
+                    "Add a plant to your collection",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(0, 0, 0, 16),
+                  child: Text(
+                      "You can take a picture of a plant or load one from the gallery. You will need to provide the light exposition and the location of the plant."),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+                  child: FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        //navigator push qualcosa
+                      },
+                      child: const Text("Take a picture")),
+                ),
+                FilledButton(
+                    onPressed: () {}, child: const Text("Load from gallery")),
+              ]),
+            ),
+          );
+        });
   }
 }
