@@ -10,6 +10,13 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return HomePage();
+    return MaterialApp(
+      title: 'Flutter Grid Home Page',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: HomePage(),
+    );
+    ;
   }
 }
