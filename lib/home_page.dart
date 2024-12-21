@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'plant_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -8,13 +9,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // items is the list of elements that will be displayed on the page
+  // leave the first one empty, it will be replaced by the light meter
   final List<String> items = List.generate(20, (index) => 'Item $index');
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Flutter Grid Home Page'),
+        title: const Text('Greenie'),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -26,7 +29,11 @@ class _HomePageState extends State<HomePage> {
           ),
           itemCount: items.length,
           itemBuilder: (context, index) {
-            return PlantCard(plantName: "$index");
+            if (index == 0) {
+              return LightMeterCard(lightReading: 100);
+            } else {
+              return PlantCard(plantName: "$index");
+            }
           },
         ),
       ),
@@ -47,6 +54,9 @@ class PlantCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         print("DEBUG: PRESSED PLANT $plantName");
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+          return PlantPage();
+        }));
       },
       child: Card(
         child: Text(plantName),
@@ -55,18 +65,20 @@ class PlantCard extends StatelessWidget {
   }
 }
 
-class LightMeterCard extends StatefulWidget {
+class LightMeterCard extends StatelessWidget {
   const LightMeterCard({
     super.key,
+    required this.lightReading,
   });
 
-  @override
-  State<LightMeterCard> createState() => _LightMeterCardState();
-}
+  final int lightReading;
 
-class _LightMeterCardState extends State<LightMeterCard> {
   @override
   Widget build(BuildContext context) {
-    return Card();
+    return Card(
+      child: Center(
+        child: Text("$lightReading"),
+      ),
+    );
   }
 }
